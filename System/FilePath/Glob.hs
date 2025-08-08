@@ -54,6 +54,7 @@ module System.FilePath.Glob
    , MatchOptions(..)
    , matchWith
    , GlobOptions(..)
+   , SymlinkBehavior(..)
    , globDirWith
      -- **** Predefined option sets
    , matchDefault, matchPosix
@@ -77,3 +78,5 @@ import System.FilePath.Glob.Directory ( GlobOptions(..), globDefault
                                       )
 import System.FilePath.Glob.Match     (match, matchWith)
 import System.FilePath.Glob.Simplify  (simplify)
+import System.FilePath.Glob.Types     ( SymlinkBehavior(..)
+                                      )

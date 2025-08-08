@@ -106,6 +106,13 @@ getRecursiveContentsDir :: FilePath -> IO [FilePath]
 getRecursiveContentsDir root =
   fmap (filter (/= root) . DList.toList) (getRecursiveContents root)
 
+-- Like 'getRecursiveContentsWithSymlinks', except this function removes the root directory
+-- from the returned list, so that it should match the union of matched and unmatched files
+-- returned from 'globDirWith', where the same directory was given as the directory argument.
+getRecursiveContentsDirWithSymlinks :: SymlinkBehavior -> FilePath -> IO [FilePath]
+getRecursiveContentsDirWithSymlinks theSymlinkBehavior root =
+  fmap (filter (/= root) . DList.toList) (getRecursiveContentsWithSymlinks theSymlinkBehavior root)
+
 -- These two patterns should always be equal
 prop_commonDirectory' :: String -> (Pattern, Pattern)
 prop_commonDirectory' str =
