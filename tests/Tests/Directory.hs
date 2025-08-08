@@ -16,6 +16,7 @@ import qualified Data.DList as DList
 
 import System.FilePath.Glob.Base
 import System.FilePath.Glob.Directory
+import System.FilePath.Glob.Types (SymlinkBehavior(..))
 import System.FilePath.Glob.Primitive
 import System.FilePath.Glob.Utils
 import Tests.Base (Path (Path), PString, unPS)
@@ -39,16 +40,18 @@ caseIncludeUnmatched = do
    everything <- fmap Path <$> getRecursiveContentsDir "System"
    let expectedMatches :: [[Path]]
        expectedMatches =
-          [ [ "System/FilePath/Glob/Directory.hs" ]
+          [ [ "System/FilePath/Glob/Directory.hs"
+            , "System/FilePath/Glob/Utils/Directory.hs"
+            ]
           , [ "System/FilePath/Glob/Match.hs"
             , "System/FilePath/Glob/Utils.hs"
             ]
           ]
    let everythingElse = everything \\ concat expectedMatches
 
-   result <- globDirWith (GlobOptions matchDefault True)
-                         (map compile pats)
-                         "System"
+   result <- globDirWith (GlobOptions matchDefault True DoNotFollowSymlinks)
+                 (map compile pats)
+                 "System"
    mapM_ (uncurry assertEqualUnordered) (zip expectedMatches (fmap Path <$> fst result))
 
    case snd result of
@@ -60,7 +63,9 @@ caseOnlyMatched = do
    let pats = ["**/D*.hs", "**/[MU]*.hs"]
    let expectedMatches :: [[Path]]
        expectedMatches =
-          [ [ "System/FilePath/Glob/Directory.hs" ]
+          [ [ "System/FilePath/Glob/Directory.hs"
+            , "System/FilePath/Glob/Utils/Directory.hs"
+            ]
           , [ "System/FilePath/Glob/Match.hs"
             , "System/FilePath/Glob/Utils.hs"
             ]

@@ -25,24 +25,30 @@ import System.FilePath.Glob.Base  ( Pattern(..), Token(..)
                                   , compile
                                   )
 import System.FilePath.Glob.Match (matchWith)
-import System.FilePath.Glob.Utils ( getRecursiveContents
+import System.FilePath.Glob.Utils ( getRecursiveContentsWithSymlinks
                                   , nubOrd
                                   , pathParts
                                   , partitionDL, tailDL
-                                  , catchIO
                                   )
--- |Options which can be passed to the 'globDirWith' function.
+
+import System.FilePath.Glob.Types (SymlinkBehavior(..))
+import System.FilePath.Glob.Utils.IO (catchIO)
+
+--- |Options which can be passed to the 'globDirWith' function.
 data GlobOptions = GlobOptions
   { matchOptions :: MatchOptions
   -- ^Options controlling how matching is performed; see 'MatchOptions'.
   , includeUnmatched :: Bool
   -- ^Whether to include unmatched files in the result.
+  , symlinkBehavior :: SymlinkBehavior
+  -- ^Whether to follow symlinked directories during traversal.
+  --   Note: On Windows, following symlinks is not supported and symlinked directories will not be traversed.
   }
 
 -- |The default set of globbing options: uses the default matching options, and
 -- does not include unmatched files.
 globDefault :: GlobOptions
-globDefault = GlobOptions matchDefault False
+globDefault = GlobOptions matchDefault False DoNotFollowSymlinks
 
 -- The Patterns in TypedPattern don't contain PathSeparator or AnyDirectory
 --
@@ -127,7 +133,7 @@ globDirWith' opts []   dir =
    if includeUnmatched opts
       then do
          dir' <- if null dir then getCurrentDirectory else return dir
-         c <- getRecursiveContents dir'
+         c <- getRecursiveContentsWithSymlinks (symlinkBehavior opts) dir'
          return ([], Just (DL.toList c))
       else
          return ([], Nothing)
@@ -215,7 +221,7 @@ matchTypedAndGo opts (AnyDir n p:ps) path absPath =
 
          case unconditionalMatch || matchWith (matchOptions opts) p' path of
               True | isDir -> do
-                 contents <- getRecursiveContents absPath
+                 contents <- getRecursiveContentsWithSymlinks (symlinkBehavior opts) absPath
                  return $
                     -- foo**/ should match foo/ and nothing below it
                     -- relies on head contents == absPath
@@ -288,7 +294,7 @@ didNotMatch opts path absPath isDir =
          if isDir
             then if path `elem` [".",".."]
                     then return DL.empty
-                    else getRecursiveContents absPath
+                    else getRecursiveContentsWithSymlinks (symlinkBehavior opts) absPath
             else return$ DL.singleton absPath
       else
          return (DL.empty, DL.empty)

@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
 
 module System.FilePath.Glob.Internal
    ( doesDirectoryExistFast
@@ -14,6 +15,11 @@ import Foreign.Marshal.Alloc (allocaBytes)
 import System.FilePath
    (isDrive, dropTrailingPathSeparator, addTrailingPathSeparator)
 import System.Posix.Internals (sizeof_stat, lstat, s_isdir, st_mode)
+#endif
+
+#if mingw32_HOST_OS
+foreign import stdcall unsafe "windows.h GetFileAttributesW"
+   c_GetFileAttributes :: LPCTSTR -> IO FileAttributeOrFlag
 #endif
 
 -- Significantly speedier than System.Directory.doesDirectoryExistFast.

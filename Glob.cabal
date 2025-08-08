@@ -37,7 +37,9 @@ Library
       Build-Depends: semigroups >= 0.18
 
    if os(windows)
-      Build-Depends: Win32 >= 2
+      Build-Depends: Win32            >= 2
+   else
+      Build-Depends: unix             >= 2.7
 
    Default-Language: Haskell98
 
@@ -48,9 +50,13 @@ Library
                     System.FilePath.Glob.Internal
                     System.FilePath.Glob.Match
                     System.FilePath.Glob.Simplify
+                    System.FilePath.Glob.Types
                     System.FilePath.Glob.Utils
+                    System.FilePath.Glob.Utils.Directory
+                    System.FilePath.Glob.Utils.IO
 
    GHC-Options: -Wall
+
 
 Test-Suite glob-tests
    type: exitcode-stdio-1.0
@@ -67,9 +73,11 @@ Test-Suite glob-tests
                 , transformers-compat        >= 0.3
                 , HUnit                      >= 1.2
                 , QuickCheck                 >= 2
+                , temporary                  >= 1.2
                 , test-framework             >= 0.2
                 , test-framework-hunit       >= 0.2
                 , test-framework-quickcheck2 >= 0.3
+                , unix                       >= 2.7
 
    if impl(ghc < 8.0)
       Build-Depends: semigroups >= 0.18
@@ -85,7 +93,10 @@ Test-Suite glob-tests
                   System.FilePath.Glob.Match
                   System.FilePath.Glob.Primitive
                   System.FilePath.Glob.Simplify
+                  System.FilePath.Glob.Types
                   System.FilePath.Glob.Utils
+                  System.FilePath.Glob.Utils.Directory
+                  System.FilePath.Glob.Utils.IO
                   Tests.Base
                   Tests.Compiler
                   Tests.Directory
@@ -95,5 +106,7 @@ Test-Suite glob-tests
                   Tests.Regression
                   Tests.Simplifier
                   Tests.Utils
+                  Tests.Symlinks
+                  Tests.Symlinks.NoSymlinksTree
 
    GHC-Options: -Wall

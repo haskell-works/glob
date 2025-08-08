@@ -13,6 +13,7 @@ import qualified Tests.Optimizer  as Optimizer
 import qualified Tests.Regression as Regression
 import qualified Tests.Simplifier as Simplifier
 import qualified Tests.Utils      as Utils
+import qualified Tests.Symlinks  as Symlinks
 
 main :: IO ()
 main = do
@@ -33,4 +34,5 @@ tests =
    , Simplifier.tests
    , Instances.tests
    , Directory.tests
+   , Symlinks.tests
    ]

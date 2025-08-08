@@ -11,25 +11,68 @@ module System.FilePath.Glob.Utils
    , nubOrd
    , partitionDL, tailDL
    , getRecursiveContents
-   , catchIO
+   , getRecursiveContentsWithSymlinks
    ) where
 
 import Control.Monad    (foldM)
-import qualified Control.Exception as E
 import Data.List        ((\\))
 import qualified Data.DList as DL
 import Data.DList       (DList)
 import qualified Data.Set as Set
-import System.Directory (getDirectoryContents)
+import System.Directory (getDirectoryContents, pathIsSymbolicLink)
 import System.FilePath  ((</>), isPathSeparator, dropDrive)
 import System.FilePath.Glob.Internal
+import System.FilePath.Glob.Utils.IO (catchIO)
 import System.IO.Unsafe (unsafeInterleaveIO)
+
+import System.FilePath.Glob.Utils.Directory (isDirectory)
+import System.FilePath.Glob.Types (SymlinkBehavior(..))
 
 #if mingw32_HOST_OS
 import Data.Bits          ((.&.))
 import System.Win32.Types (LPCTSTR, withTString)
 import System.Win32.File  (FileAttributeOrFlag, fILE_ATTRIBUTE_DIRECTORY)
 #endif
+
+
+-- | Recursively list all files and directories under the given directory.
+--
+-- The traversal behavior for symlinks to directories is controlled by the
+-- 'SymlinkBehavior' argument:
+--
+--   * 'FollowSymlinks': Symlinks to directories are followed, so the traversal
+--     will recurse into them as if they were normal directories. This may result
+--     in visiting the same file or directory multiple times if there are cycles.
+--
+--   * 'DoNotFollowSymlinks': Symlinks to directories are not followed; the
+--     traversal will include the symlink itself in the result, but will not
+--     recurse into it.
+--
+-- The result is a 'DList' of all files and directories (including the root),
+-- in traversal order. The function is robust to IO errors (e.g., permission
+-- denied), returning the directory itself if it cannot be read.
+--
+-- When there are no symlinks in the directory tree, both behaviors are
+-- equivalent and produce the same result.
+--
+-- Note: On Windows, following symlinks is not supported and symlinked directories will not be traversed.
+getRecursiveContentsWithSymlinks :: SymlinkBehavior -> FilePath -> IO (DList FilePath)
+getRecursiveContentsWithSymlinks symlinkBehavior dir =
+    flip catchIO (\_ -> return $ DL.singleton dir) $ do
+         isSymDir <- pathIsSymbolicLink dir
+         let followSymlinks = symlinkBehavior == FollowSymlinks
+         if isSymDir && not followSymlinks
+            then return $ DL.singleton dir
+            else do
+               raw <- getDirectoryContents dir
+               let entries = map (dir </>) (raw \\ [".",".."])
+               entryInfos <- mapM (\e -> do
+                  isDir <- isDirectory followSymlinks e
+                  return (e, isDir)) entries
+               let (dirs,files) = ([e | (e,True) <- entryInfos], [e | (e,False) <- entryInfos])
+               subs <- unsafeInterleaveIO . mapM (getRecursiveContentsWithSymlinks symlinkBehavior) $ dirs
+               return $ DL.cons dir (DL.fromList files `DL.append` DL.concat subs)
+
 
 inRange :: Ord a => (a,a) -> a -> Bool
 inRange (a,b) c = c >= a && c <= b
@@ -109,8 +152,13 @@ foreign import ccall unsafe "windows.h GetFileAttributesW" c_GetFileAttributes :
 #endif
 #endif
 
+-- | Recursively list all files and directories, not following symlinks (legacy behavior).
 getRecursiveContents :: FilePath -> IO (DList FilePath)
-getRecursiveContents dir =
+getRecursiveContents = getRecursiveContentsWithoutSymlinks
+
+
+getRecursiveContentsWithoutSymlinks :: FilePath -> IO (DList FilePath)
+getRecursiveContentsWithoutSymlinks dir =
    flip catchIO (\_ -> return $ DL.singleton dir) $ do
 
       raw <- getDirectoryContents dir
@@ -154,5 +202,3 @@ nubOrd = go Set.empty
          then go set xs
          else x : go (Set.insert x set) xs
 
-catchIO :: IO a -> (E.IOException -> IO a) -> IO a
-catchIO = E.catch

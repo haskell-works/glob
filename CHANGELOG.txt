@@ -1,3 +1,8 @@
+master, 2025-08-08:
+	Added ability to follow symlinks during recursive directory traversal via a new SymlinkBehavior option.
+	Moved doesDirectoryExistFast to a new System.FilePath.Glob.Internal module for better encapsulation.
+	Renamed the optimized doesDirectoryExist to doesDirectoryExistFast for clarity.
+
 0.10.2, 2021-11-10:
 	Relaxed transformers-compat version bound.
 
