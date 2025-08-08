@@ -104,16 +104,16 @@ pathParts p = p : let d = dropDrive p
          then xs : f xs
          else      f xs
 
--- Significantly speedier than System.Directory.doesDirectoryExist.
-doesDirectoryExist :: FilePath -> IO Bool
+-- Significantly speedier than System.Directory.doesDirectoryExistFast.
+doesDirectoryExistFast :: FilePath -> IO Bool
 #if mingw32_HOST_OS
 -- This one allocates more memory since it has to do a UTF-16 conversion, but
 -- that can't really be helped: the below version is locale-dependent.
-doesDirectoryExist = flip withTString $ \s -> do
+doesDirectoryExistFast = flip withTString $ \s -> do
    a <- c_GetFileAttributes s
    return (a /= 0xffffffff && a.&.fILE_ATTRIBUTE_DIRECTORY /= 0)
 #else
-doesDirectoryExist s =
+doesDirectoryExistFast s =
    allocaBytes sizeof_stat $ \p ->
       withCString
          (if isDrive s
@@ -143,7 +143,7 @@ getRecursiveContents dir =
       raw <- getDirectoryContents dir
 
       let entries = map (dir </>) (raw \\ [".",".."])
-      (dirs,files) <- partitionM doesDirectoryExist entries
+      (dirs,files) <- partitionM doesDirectoryExistFast entries
 
       subs <- unsafeInterleaveIO . mapM getRecursiveContents $ dirs
 
